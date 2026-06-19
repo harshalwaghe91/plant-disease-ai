@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Prediction History — Admin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Prediction History</h3>
+    <p class="text-muted mb-0">{{ history|length }} total predictions</p>
+  </div>
+  <a href="/admin" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i>Dashboard
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    {% if history %}
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 predictions-table">
+        <thead>
+          <tr>
+            <th class="px-4 py-3">Timestamp</th>
+            <th>Plant</th>
+            <th>Disease</th>
+            <th>Confidence</th>
+            <th>Image</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in history %}
+          <tr id="row_{{ r.id }}">
+            <td class="px-4 text-muted small">{{ r.timestamp }}</td>
+            <td><span class="badge bg-light text-dark">{{ r.plant }}</span></td>
+            <td class="fw-500">{{ r.disease.replace('_',' ') }}</td>
+            <td>
+              <span class="badge {% if r.confidence >= 90 %}bg-success{% elif r.confidence >= 75 %}bg-info{% else %}bg-warning text-dark{% endif %}">
+                {{ r.confidence }}%
+              </span>
+            </td>
+            <td>
+              <a href="/static/uploads/{{ r.filename }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">
+                <i class="bi bi-image"></i>
+              </a>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-outline-danger py-0"
+                      onclick="deleteRecord('{{ r.id }}')">
+                <i class="bi bi-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-5">
+      <i class="bi bi-inbox display-4 d-block mb-3"></i>
+      <h5>No predictions yet</h5>
+      <p>Predictions will appear here after users analyze leaf images.</p>
+      <a href="/" class="btn btn-primary">Try a Prediction</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function deleteRecord(id) {
+  if (!confirm('Delete this prediction record?')) return;
+  fetch('/admin/delete_prediction/' + id, { method: 'POST' })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        const row = document.getElementById('row_' + id);
+        row.style.transition = 'opacity .3s';
+        row.style.opacity = '0';
+        setTimeout(() => row.remove(), 300);
+      }
+    });
+}
+</script>
+{% endblock %}

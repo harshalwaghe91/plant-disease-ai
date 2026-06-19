@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — PlantGuardAI{% endblock %}
+
+{% block extra_css %}
+<style>
+  .admin-stat {
+    border-radius: 16px;
+    padding: 24px;
+    color: white;
+    box-shadow: var(--shadow);
+  }
+  .admin-stat .num { font-size: 2.5rem; font-weight: 800; }
+  .admin-stat .lbl { opacity: .85; font-size: .88rem; }
+  .sidebar-nav .nav-link {
+    color: var(--text); border-radius: 10px;
+    padding: 10px 16px; font-weight: 500;
+    transition: all .2s;
+  }
+  .sidebar-nav .nav-link:hover,
+  .sidebar-nav .nav-link.active {
+    background: linear-gradient(135deg, var(--primary), var(--primary-lt));
+    color: white;
+  }
+  .sidebar-nav .nav-link i { width: 20px; }
+  .disease-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    border-radius: 99px;
+    background: #f0fdf4;
+    border: 1px solid var(--accent);
+    margin: 4px;
+    font-size: .83rem;
+  }
+  .disease-pill .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+  }
+  .add-disease-form .form-control,
+  .add-disease-form .form-select { border-radius: 10px; }
+  table.predictions-table th { background: var(--primary); color: white; }
+  table.predictions-table td { vertical-align: middle; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Admin Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold mb-1">Admin Dashboard</h3>
+    <p class="text-muted mb-0">
+      <i class="bi bi-person-circle me-1"></i>Logged in as <strong>{{ session.admin_user }}</strong>
+    </p>
+  </div>
+  <a href="/admin/logout" class="btn btn-outline-danger">
+    <i class="bi bi-box-arrow-right me-1"></i>Logout
+  </a>
+</div>
+
+<!-- Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="admin-stat" style="background:linear-gradient(135deg,#2d6a4f,#52b788)">
+      <div class="num">{{ stats.total_predictions }}</div>
+      <div class="lbl"><i class="bi bi-graph-up me-1"></i>Total Predictions</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="admin-stat" style="background:linear-gradient(135deg,#1e3a5f,#2563eb)">
+      <div class="num">{{ stats.num_diseases }}</div>
+      <div class="lbl"><i class="bi bi-bug me-1"></i>Disease Classes</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="admin-stat" style="background:linear-gradient(135deg,#7c3aed,#a78bfa)">
+      <div class="num">{{ stats.recent|length }}</div>
+      <div class="lbl"><i class="bi bi-clock me-1"></i>Recent (10)</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="admin-stat" style="background:linear-gradient(135deg,#b45309,#f59e0b)">
+      <div class="num">95%</div>
+      <div class="lbl"><i class="bi bi-bullseye me-1"></i>Target Accuracy</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Left: Disease DB + Add -->
+  <div class="col-lg-7">
+
+    <!-- Current Disease Database -->
+    <div class="card mb-4">
+      <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background:var(--primary);color:white">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-database me-2"></i>Disease Database</h6>
+        <span class="badge bg-light text-dark">{{ diseases|length }} diseases</span>
+      </div>
+      <div class="card-body p-3">
+        <div>
+          {% for key, d in diseases.items() %}
+          <span class="disease-pill">
+            <span class="dot" style="background:{{ d.color }}"></span>
+            {{ d.display_name }}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Add New Disease -->
+    <div class="card">
+      <div class="card-header py-3" style="background:var(--primary);color:white">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-plus-circle me-2"></i>Add New Disease</h6>
+      </div>
+      <div class="card-body p-4 add-disease-form">
+        <div id="addDiseaseAlert"></div>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-500 small">Disease Key (unique ID)*</label>
+            <input type="text" class="form-control" id="ad_key" placeholder="e.g. Tomato_Spider_Mite">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-500 small">Display Name*</label>
+            <input type="text" class="form-control" id="ad_name" placeholder="Tomato Spider Mite">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-500 small">Plant</label>
+            <input type="text" class="form-control" id="ad_plant" placeholder="Tomato">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-500 small">Severity</label>
+            <select class="form-select" id="ad_severity">
+              <option>None</option><option>Low</option>
+              <option>Moderate</option><option>High</option><option>Very High</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-500 small">Color</label>
+            <input type="color" class="form-control form-control-color" id="ad_color" value="#2d6a4f">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-500 small">Description</label>
+            <textarea class="form-control" id="ad_desc" rows="2" placeholder="Brief disease description..."></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-500 small">Chemical Treatment</label>
+            <textarea class="form-control" id="ad_chemical" rows="2" placeholder="Fungicide/Pesticide details..."></textarea>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-500 small">Organic Treatment</label>
+            <textarea class="form-control" id="ad_organic" rows="2" placeholder="Neem oil, copper spray..."></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-500 small">Symptoms (one per line)</label>
+            <textarea class="form-control" id="ad_symptoms" rows="3" placeholder="Brown spots on leaves&#10;Yellow halo around spots"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-500 small">Prevention Methods (one per line)</label>
+            <textarea class="form-control" id="ad_prevention" rows="3" placeholder="Crop rotation&#10;Use resistant varieties"></textarea>
+          </div>
+          <div class="col-12">
+            <button class="btn btn-primary px-4" onclick="addDisease()">
+              <i class="bi bi-plus-circle me-2"></i>Add Disease to Database
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Recent Predictions + Top Diseases -->
+  <div class="col-lg-5">
+
+    <!-- Top Diseases -->
+    {% if stats.top_diseases %}
+    <div class="card mb-4">
+      <div class="card-header py-3" style="background:var(--primary);color:white">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart me-2"></i>Most Detected Diseases</h6>
+      </div>
+      <div class="card-body p-4">
+        {% for d in stats.top_diseases %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="small fw-500">{{ d.name }}</span>
+            <span class="badge bg-success">{{ d.count }}</span>
+          </div>
+          <div class="progress">
+            <div class="progress-bar" style="width:{{ (d.count / stats.top_diseases[0].count * 100)|int }}%;background:var(--primary)"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Predictions -->
+    <div class="card">
+      <div class="card-header py-3 d-flex justify-content-between align-items-center" style="background:var(--primary);color:white">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>Recent Predictions</h6>
+        <a href="/admin/history" class="btn btn-sm btn-light">View All</a>
+      </div>
+      <div class="card-body p-0">
+        {% if stats.recent %}
+        <div class="list-group list-group-flush">
+          {% for r in stats.recent %}
+          <div class="list-group-item px-4 py-3">
+            <div class="d-flex justify-content-between">
+              <div>
+                <div class="fw-500 small">{{ r.disease.replace('_',' ') }}</div>
+                <small class="text-muted">{{ r.plant }} · {{ r.timestamp }}</small>
+              </div>
+              <span class="badge bg-success rounded-pill align-self-center">{{ r.confidence }}%</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted p-4">
+          <i class="bi bi-inbox display-6 d-block mb-2"></i>
+          No predictions yet
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addDisease() {
+  const key      = document.getElementById('ad_key').value.trim();
+  const name     = document.getElementById('ad_name').value.trim();
+  const plant    = document.getElementById('ad_plant').value.trim();
+  const severity = document.getElementById('ad_severity').value;
+  const color    = document.getElementById('ad_color').value;
+  const desc     = document.getElementById('ad_desc').value.trim();
+  const chemical = document.getElementById('ad_chemical').value.trim();
+  const organic  = document.getElementById('ad_organic').value.trim();
+  const symptoms = document.getElementById('ad_symptoms').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const prev     = document.getElementById('ad_prevention').value.split('\n').map(s=>s.trim()).filter(Boolean);
+
+  if (!key || !name) {
+    showAlert('danger', 'Key and Display Name are required.');
+    return;
+  }
+
+  fetch('/admin/add_disease', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      key, display_name: name, plant, severity, color,
+      description: desc, chemical_treatment: chemical,
+      organic_treatment: organic, symptoms, causes: [],
+      prevention: prev
+    })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      showAlert('success', d.message + ' Refresh the page to see it.');
+      ['ad_key','ad_name','ad_plant','ad_desc','ad_chemical','ad_organic','ad_symptoms','ad_prevention'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+    } else {
+      showAlert('danger', d.error);
+    }
+  })
+  .catch(e => showAlert('danger', e.message));
+}
+
+function showAlert(type, msg) {
+  document.getElementById('addDiseaseAlert').innerHTML =
+    `<div class="alert alert-${type} alert-dismissible mb-3">
+      ${msg}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>`;
+}
+</script>
+{% endblock %}

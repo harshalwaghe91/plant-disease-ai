@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Admin Login — PlantGuardAI{% endblock %}
+
+{% block extra_css %}
+<style>
+  .login-wrapper {
+    min-height: calc(100vh - 200px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .login-card {
+    width: 100%; max-width: 420px;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  .login-header {
+    background: linear-gradient(135deg, var(--primary-dk), var(--primary));
+    padding: 40px 32px 32px;
+    text-align: center; color: white;
+  }
+  .login-icon {
+    width: 70px; height: 70px;
+    background: rgba(255,255,255,.15);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 16px;
+    font-size: 2rem;
+    backdrop-filter: blur(4px);
+  }
+  .login-body { padding: 32px; }
+  .form-floating label { color: var(--muted); }
+  .form-floating .form-control { border-radius: 12px; border: 2px solid #e9ecef; }
+  .form-floating .form-control:focus { border-color: var(--primary-lt); box-shadow: 0 0 0 3px rgba(82,183,136,.15); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-wrapper">
+  <div class="login-card card">
+    <div class="login-header">
+      <div class="login-icon"><i class="bi bi-shield-lock"></i></div>
+      <h4 class="fw-bold mb-1">Admin Panel</h4>
+      <p class="mb-0" style="opacity:.8">Sign in to manage the system</p>
+    </div>
+    <div class="login-body">
+      <form method="POST">
+        <div class="form-floating mb-3">
+          <input type="text" class="form-control" id="username" name="username"
+                 placeholder="Username" required autocomplete="username">
+          <label for="username"><i class="bi bi-person me-2"></i>Username</label>
+        </div>
+        <div class="form-floating mb-4">
+          <input type="password" class="form-control" id="password" name="password"
+                 placeholder="Password" required autocomplete="current-password">
+          <label for="password"><i class="bi bi-lock me-2"></i>Password</label>
+        </div>
+        <button type="submit" class="btn btn-primary w-100 py-3 fw-bold">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+        </button>
+      </form>
+      <div class="text-center mt-4">
+        <a href="/" class="text-muted small">
+          <i class="bi bi-arrow-left me-1"></i>Back to Home
+        </a>
+      </div>
+      <div class="alert alert-info mt-3 mb-0 py-2" style="font-size:.82rem">
+        <i class="bi bi-info-circle me-1"></i>
+        Default: admin / admin123 &nbsp;(change via ENV variables)
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

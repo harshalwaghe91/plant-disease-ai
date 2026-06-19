@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+{% block title %}Detection Result — PlantGuardAI{% endblock %}
+
+{% block extra_css %}
+<style>
+  .result-hero {
+    border-radius: 20px;
+    padding: 32px;
+    color: white;
+    margin-bottom: 28px;
+    background: linear-gradient(135deg, var(--primary-dk) 0%, var(--primary) 100%);
+  }
+  .disease-name { font-size: clamp(1.4rem, 3vw, 2rem); font-weight: 800; }
+  .conf-ring {
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: conic-gradient(var(--accent) 0% {{ result.confidence * 100 }}%, rgba(255,255,255,.2) {{ result.confidence * 100 }}% 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .conf-ring::before {
+    content: '';
+    width: 80px; height: 80px;
+    background: rgba(27,67,50,.8);
+    border-radius: 50%;
+    position: absolute;
+  }
+  .conf-value {
+    font-size: 1.3rem; font-weight: 800; color: white;
+    position: relative; z-index: 1;
+  }
+  .info-section { margin-bottom: 24px; }
+  .info-section h6 {
+    font-size: .7rem; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--primary); font-weight: 700; margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid var(--accent);
+    display: inline-block;
+  }
+  .symptom-item, .prevention-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .symptom-item:last-child, .prevention-item:last-child { border-bottom: none; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--primary-lt);
+    flex-shrink: 0; margin-top: 7px;
+  }
+  .treatment-box {
+    border-radius: 14px;
+    padding: 20px;
+    height: 100%;
+  }
+  .treatment-box.chemical { background: linear-gradient(135deg, #fff7ed, #ffedd5); border-left: 4px solid #f97316; }
+  .treatment-box.organic  { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-left: 4px solid var(--primary-lt); }
+  .top3-bar {
+    border-radius: 99px;
+    height: 10px;
+    background: var(--primary-lt);
+    transition: width 1s ease;
+  }
+  .leaf-img {
+    border-radius: 16px;
+    width: 100%;
+    max-height: 320px;
+    object-fit: cover;
+    box-shadow: var(--shadow-lg);
+  }
+  {% if result.demo_mode %}
+  .demo-banner {
+    background: linear-gradient(90deg, #fef3c7, #fde68a);
+    border-radius: 12px; padding: 12px 20px;
+    border-left: 4px solid #f59e0b;
+    margin-bottom: 20px;
+  }
+  {% endif %}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if result.demo_mode %}
+<div class="demo-banner">
+  <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+  <strong>Demo Mode:</strong> Model not trained yet. This is a sample result. Run <code>train.py</code> to enable real predictions.
+</div>
+{% endif %}
+
+<!-- Result Hero -->
+<div class="result-hero">
+  <div class="row align-items-center g-3">
+    <div class="col-md-7">
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <span class="badge" style="background:rgba(255,255,255,.2); font-size:.8rem">
+          🌱 {{ result.disease_info.plant }}
+        </span>
+        {% set sev = result.disease_info.severity | lower | replace(' ', '-') %}
+        <span class="severity-badge severity-{{ sev }}" style="font-size:.7rem">
+          {{ result.disease_info.severity }} Severity
+        </span>
+      </div>
+      <h2 class="disease-name mb-2">{{ result.disease_info.display_name }}</h2>
+      <p class="mb-0" style="opacity:.85; max-width:500px">
+        {{ result.disease_info.description | truncate(180) }}
+      </p>
+    </div>
+    <div class="col-md-5 d-flex justify-content-md-end justify-content-start align-items-center gap-4">
+      <div class="conf-ring">
+        <span class="conf-value">{{ result.confidence_pct }}</span>
+      </div>
+      <div>
+        <div class="fw-bold" style="font-size:1.1rem">Confidence</div>
+        <div style="color:var(--accent)">{{ result.confidence_label }}</div>
+        <small style="opacity:.75">AI Detection Score</small>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Left Column -->
+  <div class="col-lg-4">
+    <!-- Leaf Image -->
+    <div class="card mb-4">
+      <div class="card-body p-3">
+        <img src="{{ result.image_url }}" class="leaf-img" alt="Uploaded leaf">
+        <div class="text-center mt-3">
+          <small class="text-muted">Analyzed image</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top 3 Predictions -->
+    <div class="card">
+      <div class="card-header py-3" style="background:var(--primary);color:white">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart me-2"></i>Top Predictions</h6>
+      </div>
+      <div class="card-body">
+        {% for pred in result.top3 %}
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-1">
+            <small class="fw-500">{{ pred.display.replace('_',' ') }}</small>
+            <small class="fw-bold text-success">{{ pred.confidence }}%</small>
+          </div>
+          <div class="progress">
+            <div class="progress-bar" role="progressbar"
+                 style="width:{{ pred.confidence }}%;background:{% if loop.first %}var(--primary){% elif loop.index==2 %}var(--primary-lt){% else %}var(--accent){% endif %}">
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Column -->
+  <div class="col-lg-8">
+    <!-- Disease Details -->
+    <div class="card mb-4">
+      <div class="card-header py-3" style="background:var(--primary);color:white">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-clipboard2-pulse me-2"></i>Disease Information</h6>
+      </div>
+      <div class="card-body p-4">
+        <p class="text-muted">{{ result.disease_info.description }}</p>
+
+        <!-- Symptoms -->
+        <div class="info-section">
+          <h6>Symptoms</h6>
+          {% for s in result.disease_info.symptoms %}
+          <div class="symptom-item">
+            <div class="dot"></div>
+            <span>{{ s }}</span>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Causes -->
+        <div class="info-section">
+          <h6>Causes</h6>
+          {% for c in result.disease_info.causes %}
+          <div class="symptom-item">
+            <div class="dot" style="background:#f97316"></div>
+            <span>{{ c }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Treatment -->
+    <div class="card mb-4">
+      <div class="card-header py-3" style="background:var(--primary);color:white">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-journal-medical me-2"></i>Treatment Recommendations</h6>
+      </div>
+      <div class="card-body p-4">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="treatment-box chemical">
+              <h6 class="fw-bold mb-3">
+                <i class="bi bi-flask me-2" style="color:#f97316"></i>Chemical Treatment
+              </h6>
+              <p class="mb-0">{{ result.disease_info.chemical_treatment }}</p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="treatment-box organic">
+              <h6 class="fw-bold mb-3">
+                <i class="bi bi-leaf me-2 text-success"></i>Organic Treatment
+              </h6>
+              <p class="mb-0">{{ result.disease_info.organic_treatment }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Prevention -->
+    <div class="card mb-4">
+      <div class="card-header py-3" style="background:var(--primary);color:white">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-shield-check me-2"></i>Preventive Measures</h6>
+      </div>
+      <div class="card-body p-4">
+        <div class="row g-2">
+          {% for p in result.disease_info.prevention %}
+          <div class="col-md-6">
+            <div class="prevention-item">
+              <i class="bi bi-check-circle-fill text-success mt-1 flex-shrink-0"></i>
+              <span>{{ p }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="d-flex gap-3 flex-wrap">
+      <button class="btn btn-primary px-4" onclick="downloadPDF()">
+        <i class="bi bi-file-pdf me-2"></i>Download PDF Report
+      </button>
+      <a href="/" class="btn btn-outline-secondary px-4">
+        <i class="bi bi-arrow-left me-2"></i>Analyze Another
+      </a>
+      <button class="btn btn-outline-success px-4" onclick="shareResult()">
+        <i class="bi bi-share me-2"></i>Share
+      </button>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function downloadPDF() {
+  const btn = event.target.closest('button');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating PDF...';
+
+  const data = {
+    disease_name: "{{ result.disease_info.display_name }}",
+    confidence:   "{{ result.confidence_pct }}",
+    plant:        "{{ result.disease_info.plant }}",
+    severity:     "{{ result.disease_info.severity }}",
+    description:  {{ result.disease_info.description | tojson }},
+    symptoms:     {{ result.disease_info.symptoms | tojson }},
+    causes:       {{ result.disease_info.causes | tojson }},
+    chemical_treatment: {{ result.disease_info.chemical_treatment | tojson }},
+    organic_treatment:  {{ result.disease_info.organic_treatment | tojson }},
+    prevention:   {{ result.disease_info.prevention | tojson }}
+  };
+
+  fetch('/download_report', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  })
+  .then(r => {
+    if (!r.ok) return r.json().then(e => { throw new Error(e.error); });
+    return r.blob();
+  })
+  .then(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'plant_disease_report.pdf';
+    a.click();
+    URL.revokeObjectURL(url);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-file-pdf me-2"></i>Download PDF Report';
+  })
+  .catch(err => {
+    alert('PDF error: ' + err.message);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-file-pdf me-2"></i>Download PDF Report';
+  });
+}
+
+function shareResult() {
+  if (navigator.share) {
+    navigator.share({
+      title: 'PlantGuardAI Result',
+      text: 'Disease detected: {{ result.disease_info.display_name }} ({{ result.confidence_pct }} confidence)',
+      url: window.location.href
+    });
+  } else {
+    navigator.clipboard.writeText(window.location.href);
+    alert('Link copied to clipboard!');
+  }
+}
+</script>
+{% endblock %}

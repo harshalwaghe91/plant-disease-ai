@@ -1,0 +1,32 @@
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+env/
+.venv/
+
+# Model files (large - use Git LFS or upload manually)
+model/model.h5
+model/best_phase1.h5
+
+# Uploads (user data)
+static/uploads/*
+!static/uploads/.gitkeep
+
+# Dataset
+dataset/
+
+# Logs & generated files
+*.log
+predictions_history.json
+model/training_log.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
