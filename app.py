@@ -44,22 +44,22 @@ model = None
 def load_model():
     global model
     if not os.path.exists(MODEL_PATH):
-        print(f"[WARNING] model.h5 not found at {MODEL_PATH}. Run train.py first.")
+        print(f"[WARNING] model.h5 not found. Running in demo mode.")
         return False
     try:
         import tensorflow as tf
         model = tf.keras.models.load_model(MODEL_PATH)
         print(f"[INFO] Model loaded: {MODEL_PATH}")
-
-        # Load class names from training if available
         class_names_path = os.path.join(BASE_DIR, 'model', 'class_names.json')
         if os.path.exists(class_names_path):
             with open(class_names_path) as f:
                 saved_classes = json.load(f)
             CLASS_NAMES.clear()
             CLASS_NAMES.extend(saved_classes)
-            print(f"[INFO] Loaded {len(CLASS_NAMES)} classes from training.")
         return True
+    except ImportError:
+        print("[WARNING] TensorFlow not installed. Running in demo mode.")
+        return False
     except Exception as e:
         print(f"[ERROR] Failed to load model: {e}")
         return False
