@@ -30,3 +30,6 @@ model/training_log.csv
 # OS
 .DS_Store
 Thumbs.db
+dataset.zip
+dataset/
+raw_dataset/
