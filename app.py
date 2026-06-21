@@ -39,6 +39,29 @@ ADMIN_PASSWORD_HASH = generate_password_hash(
 )
 
 # ─── Model Loading ────────────────────────────────────────────────────────────
+# ─── Auto Download Model ──────────────────────────────────────────────────────
+def download_model_if_missing():
+    """Download model.h5 from Google Drive if not present."""
+    if os.path.exists(MODEL_PATH):
+        print("[INFO] model.h5 already exists, skipping download.")
+        return
+
+    print("[INFO] model.h5 not found. Downloading from Google Drive...")
+    try:
+        import subprocess
+        # Install gdown if not available
+        subprocess.run(
+            ["pip", "install", "gdown", "--quiet"],
+            check=True
+        )
+        import gdown
+        file_id = "1euqkE-twT67cfOWWWdLkQoTZeXXQ6isF"
+        url = f"https://drive.google.com/uc?id={file_id}"
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+        gdown.download(url, MODEL_PATH, quiet=False)
+        print("[INFO] Model downloaded successfully!")
+    except Exception as e:
+        print(f"[ERROR] Could not download model: {e}")
 model = None
 
 def load_model():
@@ -374,10 +397,12 @@ def not_found(e):
 
 # ─── Main ─────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
+    download_model_if_missing()
     load_model()
     debug = os.environ.get('FLASK_DEBUG', 'false').lower() == 'true'
     port  = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=debug)
 else:
-    # Production: load model at startup
+    # Production: download and load model at startup
+    download_model_if_missing()
     load_model()
